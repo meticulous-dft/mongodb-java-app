@@ -1,0 +1,14 @@
+directories:
+  .
+  src
+
+targets:
+  //...:all
+
+java_language_level: 11
+
+test_sources:
+  src/test/*
+
+additional_languages:
+  java
