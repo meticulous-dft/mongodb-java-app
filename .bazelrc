@@ -1,5 +1,5 @@
 build --enable_bzlmod
 
-build --javacopt="-source 11 -target 11"
+build --javacopt="-source 17 -target 17"
 test --test_output=errors
 test --test_verbose_timeout_warnings
