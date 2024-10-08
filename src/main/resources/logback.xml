@@ -5,10 +5,10 @@
         </encoder>
     </appender>
 
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/mongodb-scaling-test.log</file>
+    <appender name="DATA_LOAD_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/load_output.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>logs/mongodb-scaling-test.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>logs/load_output.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>
             <totalSizeCap>3GB</totalSizeCap>
         </rollingPolicy>
@@ -17,11 +17,29 @@
         </encoder>
     </appender>
 
-    <logger name="com.example" level="INFO"/>
-    <logger name="org.mongodb.driver" level="INFO"/>
+    <appender name="LOAD_TEST_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/run_output.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/run_output.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>3GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE" />
-        <appender-ref ref="FILE" />
     </root>
+
+    <logger name="com.example.DataLoad" level="INFO" additivity="false">
+        <appender-ref ref="DATA_LOAD_FILE" />
+        <appender-ref ref="CONSOLE" />
+    </logger>
+
+    <logger name="com.example.LoadTest" level="DEBUG" additivity="false">
+        <appender-ref ref="LOAD_TEST_FILE" />
+        <appender-ref ref="CONSOLE" />
+    </logger>
 </configuration>

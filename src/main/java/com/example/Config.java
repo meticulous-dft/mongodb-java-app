@@ -8,6 +8,7 @@ public class Config {
   private final int writePercentage;
   private final int numThreads;
   private final int documentsPerThread;
+  private final int targetDocumentSize;
 
   private Config(
       String connectionString,
@@ -15,15 +16,16 @@ public class Config {
       String collectionName,
       double totalDataSizeGB,
       int writePercentage,
-      int numThreads) {
+      int numThreads,
+      int targetDocumentSize) {
     this.connectionString = connectionString;
     this.databaseName = databaseName;
     this.collectionName = collectionName;
     this.totalDataSizeGB = totalDataSizeGB;
     this.writePercentage = writePercentage;
     this.numThreads = numThreads;
-    long totalDocuments =
-        (long) (totalDataSizeGB * 1024 * 1024 * 1024) / MongoDBScalingTest.TARGET_DOCUMENT_SIZE;
+    this.targetDocumentSize = targetDocumentSize;
+    long totalDocuments = (long) (totalDataSizeGB * 1024 * 1024 * 1024) / targetDocumentSize;
     this.documentsPerThread = (int) (totalDocuments / numThreads);
   }
 
@@ -34,7 +36,8 @@ public class Config {
         System.getenv("MONGODB_COLLECTION"),
         Double.parseDouble(System.getenv("TOTAL_DATA_SIZE_GB")),
         Integer.parseInt(System.getenv("WRITE_PERCENTAGE")),
-        Integer.parseInt(System.getenv("NUM_THREADS")));
+        Integer.parseInt(System.getenv("NUM_THREADS")),
+        Integer.parseInt(System.getenv().getOrDefault("TARGET_DOCUMENT_SIZE", "4096")));
   }
 
   // Getters for all fields
@@ -64,5 +67,9 @@ public class Config {
 
   public int getDocumentsPerThread() {
     return documentsPerThread;
+  }
+
+  public int getTargetDocumentSize() {
+    return targetDocumentSize;
   }
 }

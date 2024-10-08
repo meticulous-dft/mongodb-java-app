@@ -17,7 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class MetricsManager {
-  private static final Logger logger = LoggerFactory.getLogger(MetricsManager.class);
+  private static final Logger logger = LoggerFactory.getLogger("com.example.LoadTest");
   private static final MetricsManager INSTANCE = new MetricsManager();
   private final OpenTelemetry openTelemetry;
   private final Meter meter;
