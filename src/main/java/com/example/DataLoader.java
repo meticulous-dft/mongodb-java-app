@@ -68,12 +68,12 @@ public class DataLoader implements Runnable {
         while (!inserted && retries < MAX_RETRIES) {
           try {
             collection.insertMany(batch);
-            insertedDocuments.addAndGet(batch.size());
-            logger.info(
+            long count = insertedDocuments.addAndGet(batch.size());
+            logger.debug(
                 "Thread {}: {} documents loaded. Total: {} / {}",
                 threadId,
                 batch.size(),
-                inserted,
+                count,
                 totalDocuments);
             inserted = true;
             retries = 0;
