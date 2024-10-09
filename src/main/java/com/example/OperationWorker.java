@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class OperationWorker implements Runnable {
-  private static final Logger logger = LoggerFactory.getLogger("com.example.LoadTest");
+  private static final Logger logger = LoggerFactory.getLogger(OperationWorker.class);
   private static final Random RANDOM = new Random();
   private final MongoCollection<Document> collection;
   private final int operationsCount;
@@ -46,7 +46,7 @@ public class OperationWorker implements Runnable {
           logger.info("{} completed {} operations", Thread.currentThread().getName(), i);
         }
       } catch (MongoException e) {
-        logger.warn("Operation failed: {}", e.getMessage(), e);
+        logger.error("Operation failed: {}", e.getMessage(), e);
         metricsManager.incrementFailedOperations();
       }
     }

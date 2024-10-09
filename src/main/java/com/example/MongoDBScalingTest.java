@@ -13,17 +13,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class MongoDBScalingTest {
-  private static final Logger dataLoadLogger = LoggerFactory.getLogger("com.example.DataLoad");
-  private static final Logger loadTestLogger = LoggerFactory.getLogger("com.example.LoadTest");
+  private static final Logger logger = LoggerFactory.getLogger(MongoDBScalingTest.class);
 
   public static void main(String[] args) {
     Config config = Config.fromEnv();
 
     if (args.length > 0 && args[0].equals("load")) {
-      dataLoadLogger.info("Starting data loading phase");
+      logger.info("Starting data loading phase");
       loadData(config);
     } else {
-      loadTestLogger.info("Starting load testing phase");
+      logger.info("Starting load testing phase");
       runLoadTest(config);
     }
   }
@@ -37,7 +36,7 @@ public class MongoDBScalingTest {
       ExecutorService executor = Executors.newFixedThreadPool(config.getNumThreads());
 
       long totalDocuments = (long) config.getNumThreads() * config.getDocumentsPerThread();
-      dataLoadLogger.info("Preparing to insert {} documents", totalDocuments);
+      logger.info("Preparing to insert {} documents", totalDocuments);
 
       AtomicLong insertedDocuments = new AtomicLong(0);
 
@@ -46,7 +45,13 @@ public class MongoDBScalingTest {
       // Create index first
       DataLoader indexCreator =
           new DataLoader(
-              collection, 0, 0, insertedDocuments, totalDocuments, config.getTargetDocumentSize());
+              collection,
+              0,
+              0,
+              insertedDocuments,
+              totalDocuments,
+              config.getTargetDocumentSize(),
+              -1);
       indexCreator.createIndexIfNeeded();
 
       for (int i = 0; i < config.getNumThreads(); i++) {
@@ -58,7 +63,8 @@ public class MongoDBScalingTest {
                 startIndex,
                 insertedDocuments,
                 totalDocuments,
-                config.getTargetDocumentSize()));
+                config.getTargetDocumentSize(),
+                i));
       }
 
       executor.shutdown();
@@ -70,8 +76,8 @@ public class MongoDBScalingTest {
                 while (!executor.isTerminated()) {
                   long inserted = insertedDocuments.get();
                   double percentage = (inserted * 100.0) / totalDocuments;
-                  dataLoadLogger.info(
-                      "Progress: {} / {} documents inserted ({}%)",
+                  logger.info(
+                      "Overall Progress: {} / {} documents inserted ({}%)",
                       inserted, totalDocuments, String.format("%.2f", percentage));
                   try {
                     Thread.sleep(10000); // Log every 10 seconds
@@ -90,12 +96,12 @@ public class MongoDBScalingTest {
       long endTime = System.currentTimeMillis();
       long duration = (endTime - startTime) / 1000; // in seconds
 
-      dataLoadLogger.info(
+      logger.info(
           "Data loading completed. {} documents inserted. Duration: {} seconds",
           insertedDocuments.get(),
           duration);
     } catch (InterruptedException e) {
-      dataLoadLogger.error("Data loading interrupted", e);
+      logger.error("Data loading interrupted", e);
       Thread.currentThread().interrupt();
     }
   }
@@ -123,10 +129,10 @@ public class MongoDBScalingTest {
       executor.shutdown();
       executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 
-      loadTestLogger.info("Load test completed.");
+      logger.info("Load test completed.");
       metricsManager.printCurrentMetrics(); // Print final metrics
     } catch (InterruptedException e) {
-      loadTestLogger.error("Load test interrupted", e);
+      logger.error("Load test interrupted", e);
       Thread.currentThread().interrupt();
     }
   }

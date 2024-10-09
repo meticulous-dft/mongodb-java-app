@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class DataLoader implements Runnable {
-  private static final Logger logger = LoggerFactory.getLogger("com.example.DataLoad");
+  private static final Logger logger = LoggerFactory.getLogger(DataLoader.class);
   private final MongoCollection<Document> collection;
   private final int documentsToLoad;
   private final int startIndex;
@@ -20,6 +20,7 @@ public class DataLoader implements Runnable {
   private final long totalDocuments;
   private final int targetDocumentSize;
   private static final AtomicBoolean indexCreated = new AtomicBoolean(false);
+  private final int threadId;
 
   public DataLoader(
       MongoCollection<Document> collection,
@@ -27,13 +28,15 @@ public class DataLoader implements Runnable {
       int startIndex,
       AtomicLong insertedDocuments,
       long totalDocuments,
-      int targetDocumentSize) {
+      int targetDocumentSize,
+      int threadId) {
     this.collection = collection;
     this.documentsToLoad = documentsToLoad;
     this.startIndex = startIndex;
     this.insertedDocuments = insertedDocuments;
     this.totalDocuments = totalDocuments;
     this.targetDocumentSize = targetDocumentSize;
+    this.threadId = threadId;
   }
 
   @Override
@@ -58,9 +61,15 @@ public class DataLoader implements Runnable {
       if (batch.size() == 1000 || i == documentsToLoad - 1) {
         collection.insertMany(batch);
         long inserted = insertedDocuments.addAndGet(batch.size());
-        logger.debug("{} documents loaded. Total: {} / {}", batch.size(), inserted, totalDocuments);
+        logger.info(
+            "Thread {}: {} documents loaded. Total: {} / {}",
+            threadId,
+            batch.size(),
+            inserted,
+            totalDocuments);
         batch.clear();
       }
     }
+    logger.info("Thread {}: Finished loading {} documents", threadId, documentsToLoad);
   }
 }
