@@ -18,8 +18,7 @@ import org.slf4j.LoggerFactory;
 public class MongoDBScalingTest {
   private static final Logger logger = LoggerFactory.getLogger(MongoDBScalingTest.class);
   // for stress testing
-  private static final int STRESS_TEST_THREADS = Runtime.getRuntime().availableProcessors();
-  private static final int STRESS_TEST_OPERATIONS_PER_THREAD = 10_000;
+  private static final int STRESS_TEST_OPERATIONS_PER_THREAD = 100_000;
   private static final AtomicBoolean stressTestKeepRunning = new AtomicBoolean(true);
 
   public static void main(String[] args) {
@@ -153,8 +152,8 @@ public class MongoDBScalingTest {
       MongoDatabase database = mongoClient.getDatabase(config.getDatabaseName());
       MongoCollection<Document> collection = database.getCollection(config.getCollectionName());
 
-      ExecutorService executor = Executors.newFixedThreadPool(STRESS_TEST_THREADS);
-      for (int i = 0; i < STRESS_TEST_THREADS; i++) {
+      ExecutorService executor = Executors.newFixedThreadPool(config.getNumThreads());
+      for (int i = 0; i < config.getNumThreads(); i++) {
         executor.submit(new CPUIntensiveTask());
       }
       // Start MongoDB operations
