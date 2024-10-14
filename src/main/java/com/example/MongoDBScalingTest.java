@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 public class MongoDBScalingTest {
   private static final Logger logger = LoggerFactory.getLogger(MongoDBScalingTest.class);
   // for stress testing
-  private static final int STRESS_TEST_OPERATIONS_PER_THREAD = 100_000;
+  private static final int STRESS_TEST_OPERATIONS_PER_THREAD = 1_000_000;
   private static final AtomicBoolean stressTestKeepRunning = new AtomicBoolean(true);
 
   public static void main(String[] args) {
@@ -160,8 +160,8 @@ public class MongoDBScalingTest {
       ExecutorService dbOperationsExecutor = Executors.newSingleThreadExecutor();
       dbOperationsExecutor.submit(() -> performMongoDBOperations(collection));
 
-      // Wait for 15 minutes
-      Thread.sleep(60_000 * 15);
+      // Wait for 60 minutes
+      Thread.sleep(60_000 * 60);
 
       // Stop all tasks
       stressTestKeepRunning.set(false);
@@ -208,7 +208,7 @@ public class MongoDBScalingTest {
       List<Integer> primes = new ArrayList<>();
       while (stressTestKeepRunning.get()) {
         for (int i = 2; i < 1_000_000_000; i++) {
-          if (i % 1_000_000 == 0) {
+          if (i % 10_000_000 == 0) {
             logger.info("checking {} is prime", i);
           }
           if (isPrime(i)) {
