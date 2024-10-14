@@ -12,7 +12,7 @@ public class CustomServerMonitorListener implements ServerMonitorListener {
 
   @Override
   public void serverHeartbeatSucceeded(ServerHeartbeatSucceededEvent event) {
-    logger.debug(
+    logger.info(
         "Server heartbeat succeeded: {}, took {} ms",
         event.getConnectionId(),
         event.getElapsedTime(TimeUnit.MILLISECONDS));

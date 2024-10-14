@@ -4,9 +4,12 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.bson.Document;
 import org.slf4j.Logger;
@@ -14,6 +17,10 @@ import org.slf4j.LoggerFactory;
 
 public class MongoDBScalingTest {
   private static final Logger logger = LoggerFactory.getLogger(MongoDBScalingTest.class);
+  // for stress testing
+  private static final int STRESS_TEST_THREADS = Runtime.getRuntime().availableProcessors();
+  private static final int STRESS_TEST_OPERATIONS_PER_THREAD = 10_000;
+  private static final AtomicBoolean stressTestKeepRunning = new AtomicBoolean(true);
 
   public static void main(String[] args) {
     Config config = Config.fromEnv();
@@ -21,6 +28,9 @@ public class MongoDBScalingTest {
     if (args.length > 0 && args[0].equals("load")) {
       logger.info("Starting data loading phase");
       loadData(config);
+    } else if (args.length > 0 && args[0].equals("stress")) {
+      logger.info("Starting stress testing phase");
+      runStressTest(config);
     } else {
       logger.info("Starting load testing phase");
       runLoadTest(config);
@@ -134,6 +144,88 @@ public class MongoDBScalingTest {
     } catch (InterruptedException e) {
       logger.error("Load test interrupted", e);
       Thread.currentThread().interrupt();
+    }
+  }
+
+  private static void runStressTest(Config config) {
+    try (MongoClient mongoClient =
+        MongoClients.create(MongoClientSettingsBuilder.build(config.getConnectionString()))) {
+      MongoDatabase database = mongoClient.getDatabase(config.getDatabaseName());
+      MongoCollection<Document> collection = database.getCollection(config.getCollectionName());
+
+      ExecutorService executor = Executors.newFixedThreadPool(STRESS_TEST_THREADS);
+      for (int i = 0; i < STRESS_TEST_THREADS; i++) {
+        executor.submit(new CPUIntensiveTask());
+      }
+      // Start MongoDB operations
+      ExecutorService dbOperationsExecutor = Executors.newSingleThreadExecutor();
+      dbOperationsExecutor.submit(() -> performMongoDBOperations(collection));
+
+      // Wait for 15 minutes
+      Thread.sleep(60_000 * 15);
+
+      // Stop all tasks
+      stressTestKeepRunning.set(false);
+
+      // Shutdown the executors and wait for tasks to complete
+      executor.shutdown();
+      dbOperationsExecutor.shutdown();
+      executor.awaitTermination(1, TimeUnit.MINUTES);
+      dbOperationsExecutor.awaitTermination(1, TimeUnit.MINUTES);
+    } catch (InterruptedException e) {
+      logger.error("Stress test interrupted", e);
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  private static void performMongoDBOperations(MongoCollection<Document> collection) {
+    int operationCount = 0;
+    while (stressTestKeepRunning.get() && operationCount < STRESS_TEST_OPERATIONS_PER_THREAD) {
+      try {
+        Document doc = new Document("testField", "testValue" + operationCount);
+        collection.insertOne(doc);
+
+        // Simulate some read operations as well
+        Document result =
+            collection.find(new Document("testField", "testValue" + operationCount)).first();
+        if (result == null) {
+          logger.error("Read operation failed for document {}", operationCount);
+        }
+
+        operationCount++;
+        if (operationCount % 100 == 0) {
+          logger.info("Completed {} operations", operationCount);
+        }
+      } catch (Exception e) {
+        logger.error("Error during MongoDB operation: {}", e.getMessage());
+      }
+    }
+  }
+
+  static class CPUIntensiveTask implements Runnable {
+    @Override
+    public void run() {
+      logger.info("stressing cpu");
+      List<Integer> primes = new ArrayList<>();
+      while (stressTestKeepRunning.get()) {
+        for (int i = 2; i < 1_000_000_000; i++) {
+          if (i % 1_000_000 == 0) {
+            logger.info("checking {} is prime", i);
+          }
+          if (isPrime(i)) {
+            primes.add(i);
+          }
+        }
+        primes.clear(); // Clear to avoid excessive memory usage
+      }
+    }
+
+    private boolean isPrime(int n) {
+      if (n <= 1) return false;
+      for (int i = 2; i <= Math.sqrt(n); i++) {
+        if (n % i == 0) return false;
+      }
+      return true;
     }
   }
 }
