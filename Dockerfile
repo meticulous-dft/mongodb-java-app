@@ -8,7 +8,7 @@ RUN mvn clean package
 # Use OpenJDK for the runtime image
 FROM openjdk:17-slim
 WORKDIR /app
-COPY --from=build /app/target/mongodb-perf-1.0-SNAPSHOT.jar ./mongodb-perf.jar
+COPY --from=build /app/target/mongodb-java-perf-1.0-SNAPSHOT.jar ./mongodb-java-perf.jar
 
 # Create a non-root user to run the application
 RUN useradd -m myuser
