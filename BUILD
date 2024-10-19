@@ -1,7 +1,7 @@
 java_binary(
-    name = "mongodb-scaling-test",
+    name = "mongodb-java-perf",
     srcs = glob(["src/main/java/com/example/*.java"]),
-    main_class = "com.example.MongoDBScalingTest",
+    main_class = "com.example.Main",
     resources = ["src/main/resources/logback.xml"],
     deps = [
         "@maven//:ch_qos_logback_logback_classic",

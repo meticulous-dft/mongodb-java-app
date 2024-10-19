@@ -15,8 +15,8 @@ import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MongoDBScalingTest {
-  private static final Logger logger = LoggerFactory.getLogger(MongoDBScalingTest.class);
+public class Main {
+  private static final Logger logger = LoggerFactory.getLogger(Main.class);
   // for stress testing
   private static final int STRESS_TEST_OPERATIONS_PER_THREAD = 1_000_000;
   private static final AtomicBoolean stressTestKeepRunning = new AtomicBoolean(true);

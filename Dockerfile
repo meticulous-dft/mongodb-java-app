@@ -8,12 +8,12 @@ RUN mvn clean package
 # Use OpenJDK for the runtime image
 FROM openjdk:17-slim
 WORKDIR /app
-COPY --from=build /app/target/mongodb-scaling-test-1.0-SNAPSHOT.jar ./mongodb-scaling-test.jar
+COPY --from=build /app/target/mongodb-perf-1.0-SNAPSHOT.jar ./mongodb-perf.jar
 
 # Create a non-root user to run the application
 RUN useradd -m myuser
 USER myuser
 
-ENTRYPOINT ["java", "-jar", "mongodb-scaling-test.jar"]
+ENTRYPOINT ["java", "-jar", "mongodb-perf.jar"]
 # The default command runs the load test, override with "load" to run data loading
 CMD ["test"]
