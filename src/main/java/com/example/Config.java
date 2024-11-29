@@ -32,12 +32,12 @@ public class Config {
   public static Config fromEnv() {
     return new Config(
         System.getenv("MONGODB_URI"),
-        System.getenv().getOrDefault("MONGODB_DATABASE", "test"),
-        System.getenv().getOrDefault("MONGODB_COLLECTION", "java"),
+        System.getenv().getOrDefault("MONGODB_DATABASE", "java"),
+        System.getenv().getOrDefault("MONGODB_COLLECTION", "usertable"),
         Double.parseDouble(System.getenv().getOrDefault("TOTAL_DATA_SIZE_GB", "1")),
         Integer.parseInt(System.getenv().getOrDefault("WRITE_PERCENTAGE", "5")),
         Integer.parseInt(System.getenv().getOrDefault("NUM_THREADS", "8")),
-        Integer.parseInt(System.getenv().getOrDefault("TARGET_DOCUMENT_SIZE", "4096")));
+        Integer.parseInt(System.getenv().getOrDefault("TARGET_DOCUMENT_SIZE", "1024")));
   }
 
   // Getters for all fields
