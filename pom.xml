@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.example</groupId>
-    <artifactId>mongodb-java-perf</artifactId>
+    <artifactId>mongodb-java-app</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>

@@ -1,4 +1,4 @@
-package com.example;
+package com.example.listeners;
 
 import com.mongodb.event.ServerHeartbeatFailedEvent;
 import com.mongodb.event.ServerHeartbeatStartedEvent;
@@ -13,12 +13,12 @@ public class CustomServerMonitorListener implements ServerMonitorListener {
 
   @Override
   public void serverHearbeatStarted(ServerHeartbeatStartedEvent event) {
-    logger.info("Starting heartbeat on {}", event.getConnectionId().getServerId().getAddress());
+    logger.debug("Starting heartbeat on {}", event.getConnectionId().getServerId().getAddress());
   }
 
   @Override
   public void serverHeartbeatSucceeded(ServerHeartbeatSucceededEvent event) {
-    logger.info(
+    logger.debug(
         "Server heartbeat succeeded: {}, took {} ms",
         event.getConnectionId().getServerId().getAddress(),
         event.getElapsedTime(TimeUnit.MILLISECONDS));

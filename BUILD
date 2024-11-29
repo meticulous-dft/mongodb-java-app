@@ -1,6 +1,6 @@
 java_binary(
-    name = "mongodb-java-perf",
-    srcs = glob(["src/main/java/com/example/*.java"]),
+    name = "mongodb-java-app",
+    srcs = glob(["src/main/java/com/example/**/*.java"]),
     main_class = "com.example.Main",
     resources = ["src/main/resources/logback.xml"],
     deps = [

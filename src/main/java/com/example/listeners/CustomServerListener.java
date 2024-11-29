@@ -1,4 +1,4 @@
-package com.example;
+package com.example.listeners;
 
 import com.mongodb.event.*;
 import org.slf4j.Logger;
@@ -9,17 +9,17 @@ public class CustomServerListener implements ServerListener {
 
   @Override
   public void serverOpening(ServerOpeningEvent event) {
-    logger.info("Server opening - Server: {}", event.getServerId());
+    logger.debug("Server opening - Server: {}", event.getServerId());
   }
 
   @Override
   public void serverClosed(ServerClosedEvent event) {
-    logger.info("Server closed - Server: {}", event.getServerId());
+    logger.debug("Server closed - Server: {}", event.getServerId());
   }
 
   @Override
   public void serverDescriptionChanged(ServerDescriptionChangedEvent event) {
-    logger.info(
+    logger.debug(
         "Server description changed - Server: {}, New description: {}",
         event.getServerId(),
         event.getNewDescription());

@@ -1,4 +1,4 @@
-package com.example;
+package com.example.listeners;
 
 import com.mongodb.event.CommandFailedEvent;
 import com.mongodb.event.CommandListener;

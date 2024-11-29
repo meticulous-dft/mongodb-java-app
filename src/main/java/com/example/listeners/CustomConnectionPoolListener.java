@@ -1,4 +1,4 @@
-package com.example;
+package com.example.listeners;
 
 import com.mongodb.event.*;
 import org.slf4j.Logger;
@@ -9,12 +9,12 @@ public class CustomConnectionPoolListener implements ConnectionPoolListener {
 
   @Override
   public void connectionPoolOpened(ConnectionPoolOpenedEvent event) {
-    logger.info("Connection pool opened: {}", event.getServerId());
+    logger.debug("Connection pool opened: {}", event.getServerId());
   }
 
   @Override
   public void connectionPoolClosed(ConnectionPoolClosedEvent event) {
-    logger.info("Connection pool closed: {}", event.getServerId());
+    logger.debug("Connection pool closed: {}", event.getServerId());
   }
 
   @Override

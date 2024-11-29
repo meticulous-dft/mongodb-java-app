@@ -1,5 +1,5 @@
 module(
-    name = "mongodb_scaling_test",
+    name = "mongodb_java_app",
     version = "0.1",
 )
 

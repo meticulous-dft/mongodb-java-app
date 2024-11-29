@@ -5,7 +5,17 @@
         </encoder>
     </appender>
 
-    <root level="DEBUG">
+    <!-- Application Loggers -->
+    <logger name="com.example" level="${LOG_LEVEL:-INFO}" />
+
+    <!-- MongoDB Driver Loggers -->
+    <logger name="org.mongodb.driver" level="${MONGODB_LOG_LEVEL:-WARN}" />
+    <logger name="org.mongodb.driver.connection" level="${MONGODB_LOG_LEVEL:-WARN}" />
+    <logger name="org.mongodb.driver.cluster" level="${MONGODB_LOG_LEVEL:-WARN}" />
+    <logger name="org.mongodb.driver.protocol" level="${MONGODB_LOG_LEVEL:-WARN}" />
+    <logger name="org.mongodb.driver.operation" level="${MONGODB_LOG_LEVEL:-WARN}" />
+
+    <root level="INFO">
         <appender-ref ref="CONSOLE" />
         <appender-ref ref="FILE" />
     </root>
