@@ -38,7 +38,7 @@ public class MetricsManager {
         Resource.getDefault()
             .merge(
                 Resource.create(
-                    Attributes.of(ResourceAttributes.SERVICE_NAME, "mongodb-scaling-test")));
+                    Attributes.of(ResourceAttributes.SERVICE_NAME, "mongodb-java-app")));
 
     SdkMeterProvider meterProvider =
         SdkMeterProvider.builder()
@@ -50,7 +50,7 @@ public class MetricsManager {
     openTelemetry =
         OpenTelemetrySdk.builder().setMeterProvider(meterProvider).buildAndRegisterGlobal();
 
-    meter = openTelemetry.getMeter("com.example.mongodb-scaling-test");
+    meter = openTelemetry.getMeter("com.example.mongodb-java-app");
 
     totalOperations =
         meter
@@ -160,5 +160,9 @@ public class MetricsManager {
     readOperationsCount.set(0);
     writeOperationsCount.set(0);
     failedOperationsCount.set(0);
+  }
+
+  public AtomicLong getTotalOperationsCount() {
+    return totalOperationsCount;
   }
 }

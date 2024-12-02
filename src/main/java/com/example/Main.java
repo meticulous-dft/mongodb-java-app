@@ -1,9 +1,14 @@
 package com.example;
 
+import com.mongodb.MongoCommandException;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.CreateCollectionOptions;
+import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.Indexes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -42,6 +47,9 @@ public class Main {
       MongoDatabase database = mongoClient.getDatabase(config.getDatabaseName());
       MongoCollection<Document> collection = database.getCollection(config.getCollectionName());
 
+      // Setup index
+      setupIndex(config, mongoClient);
+
       ExecutorService executor = Executors.newFixedThreadPool(config.getNumThreads());
 
       long totalDocuments = (long) config.getNumThreads() * config.getDocumentsPerThread();
@@ -50,18 +58,6 @@ public class Main {
       AtomicLong insertedDocuments = new AtomicLong(0);
 
       long startTime = System.currentTimeMillis();
-
-      // Create index first
-      DataLoader indexCreator =
-          new DataLoader(
-              collection,
-              0,
-              0,
-              insertedDocuments,
-              totalDocuments,
-              config.getTargetDocumentSize(),
-              -1);
-      indexCreator.createIndexIfNeeded();
 
       for (int i = 0; i < config.getNumThreads(); i++) {
         int startIndex = i * config.getDocumentsPerThread();
@@ -136,13 +132,96 @@ public class Main {
       }
 
       executor.shutdown();
+
+      // Start a progress logging thread
+      long totalDocuments = (long) config.getNumThreads() * config.getDocumentsPerThread();
+      Thread progressLogger =
+          new Thread(
+              () -> {
+                while (!executor.isTerminated()) {
+                  metricsManager.printCurrentMetrics();
+                  long totalOps = metricsManager.getTotalOperationsCount().get();
+                  double percentage = (totalOps * 100.0) / totalDocuments;
+                  logger.info(
+                      "Overall Progress: {} / {} documents ({}%)",
+                      totalOps, totalDocuments, String.format("%.2f", percentage));
+                  try {
+                    Thread.sleep(10000); // Log every 10 seconds
+                  } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                  }
+                }
+              });
+      progressLogger.start();
+
       executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+      progressLogger.interrupt(); // Stop the progress logger
+      progressLogger.join();
 
       logger.info("Load test completed.");
       metricsManager.printCurrentMetrics(); // Print final metrics
     } catch (InterruptedException e) {
       logger.error("Load test interrupted", e);
       Thread.currentThread().interrupt();
+    }
+  }
+
+  private static boolean isCollectionCreated(MongoClient client, String dbName, String collName) {
+    MongoCursor<String> collections = client.getDatabase(dbName).listCollectionNames().iterator();
+    while (collections.hasNext()) {
+      String c = collections.next();
+      if (c.equals(collName)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static void setupIndex(Config config, MongoClient client) {
+    try {
+      if (!isCollectionCreated(client, config.getDatabaseName(), config.getCollectionName())) {
+        client
+            .getDatabase(config.getDatabaseName())
+            .createCollection(config.getCollectionName(), new CreateCollectionOptions());
+      }
+
+      if (!config.sharded()) {
+        logger.info("Creating index on 'index' field");
+        client
+            .getDatabase(config.getDatabaseName())
+            .getCollection(config.getCollectionName())
+            .createIndex(Indexes.ascending("index"), new IndexOptions().background(true));
+        logger.info("Index creation completed");
+        return;
+      }
+
+      // Enable sharding for the database
+      Document enableSharding = new Document("enableSharding", config.getDatabaseName());
+      client.getDatabase("admin").runCommand(enableSharding);
+
+      // Shard the collection
+      Document shardCollection =
+          new Document(
+                  "shardCollection", config.getDatabaseName() + "." + config.getCollectionName())
+              .append("key", new Document("index", "hashed"));
+      client.getDatabase("admin").runCommand(shardCollection);
+
+      logger.info(
+          "Sharding setup completed for collection {}.{} with shard key: {}",
+          config.getDatabaseName(),
+          config.getCollectionName(),
+          "index");
+    } catch (MongoCommandException e) {
+      if (e.getErrorCode() == 23) {
+        // Already sharded, ignore
+        logger.info("Collection is already sharded");
+      } else if (e.getErrorCode() == 85) {
+        // Index already exists, ignore
+        logger.info("Index already exists");
+      } else {
+        throw e;
+      }
     }
   }
 

@@ -42,8 +42,12 @@ public class OperationWorker implements Runnable {
         }
         metricsManager.incrementTotalOperations();
 
-        if (i % 100 == 0 && i > 0) {
-          logger.info("{} completed {} operations", Thread.currentThread().getName(), i);
+        if (i % 1000 == 0 && i > 0) {
+          logger.debug(
+              "{} completed {} / {} operations",
+              Thread.currentThread().getName(),
+              i,
+              operationsCount);
         }
       } catch (MongoException e) {
         logger.error("Operation failed: {}", e.getMessage(), e);

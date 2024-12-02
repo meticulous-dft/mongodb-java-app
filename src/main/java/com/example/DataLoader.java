@@ -2,8 +2,6 @@ package com.example;
 
 import com.mongodb.MongoException;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.model.IndexOptions;
-import com.mongodb.client.model.Indexes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,16 +43,7 @@ public class DataLoader implements Runnable {
 
   @Override
   public void run() {
-    createIndexIfNeeded();
     loadDocuments();
-  }
-
-  public void createIndexIfNeeded() {
-    if (indexCreated.compareAndSet(false, true)) {
-      logger.info("Creating index on 'index' field");
-      collection.createIndex(Indexes.ascending("index"), new IndexOptions().background(true));
-      logger.info("Index creation completed");
-    }
   }
 
   private void loadDocuments() {
@@ -102,6 +91,6 @@ public class DataLoader implements Runnable {
         batch.clear();
       }
     }
-    logger.info("Thread {}: Finished loading {} documents", threadId, documentsToLoad);
+    logger.debug("Thread {}: Finished loading {} documents", threadId, documentsToLoad);
   }
 }

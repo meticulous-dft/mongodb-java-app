@@ -25,6 +25,7 @@ TOTAL_DATA_SIZE_GB    # Total data size to load in GB
 WRITE_PERCENTAGE      # Percentage of write operations during load test (0-100)
 NUM_THREADS           # Number of concurrent threads
 TARGET_DOCUMENT_SIZE  # Target size of each document in bytes (default: 4096)
+SHARDED            # Whether to enable sharding (default: false)
 LOG_LEVEL             # Log level (default: INFO)
 MONGODB_LOG_LEVEL     # MongoDB driver log level (default: INFO)
 ```
@@ -50,7 +51,7 @@ MONGODB_LOG_LEVEL     # MongoDB driver log level (default: INFO)
 ## Building Locally
 
 ```bash
-bazel build //:mongodb-java-app
+bazel build //:mongodb-java-app_deploy.jar
 ```
 
 ## Running Locally
@@ -58,13 +59,13 @@ bazel build //:mongodb-java-app
 1. Data Loading Phase:
 
 ```bash
-java -jar target/mongodb-java-app-1.0-SNAPSHOT.jar load
+java -jar bazel-bin/mongodb-java-app_deploy.jar load
 ```
 
 2. Load Testing Phase:
 
 ```bash
-java -jar target/mongodb-java-app-1.0-SNAPSHOT.jar test
+java -jar bazel-bin/mongodb-java-app_deploy.jar
 ```
 
 3. Stress Testing:
@@ -73,7 +74,7 @@ java -jar target/mongodb-java-app-1.0-SNAPSHOT.jar test
    thread to do operations on the database.
 
 ```bash
-java -jar target/mongodb-java-app-1.0-SNAPSHOT.jar stress
+java -jar bazel-bin/mongodb-java-app_deploy.jar stress
 ```
 
 ## Docker Build
