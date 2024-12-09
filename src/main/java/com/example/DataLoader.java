@@ -4,8 +4,6 @@ import com.mongodb.MongoException;
 import com.mongodb.client.MongoCollection;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,26 +16,21 @@ public class DataLoader implements Runnable {
   private final MongoCollection<Document> collection;
   private final int documentsToLoad;
   private final int startIndex;
-  private final AtomicLong insertedDocuments;
-  private final long totalDocuments;
   private final int targetDocumentSize;
-  private static final AtomicBoolean indexCreated = new AtomicBoolean(false);
+  private final MetricsManager metricsManager;
   private final int threadId;
 
   public DataLoader(
       MongoCollection<Document> collection,
       int documentsToLoad,
       int startIndex,
-      AtomicLong insertedDocuments,
-      long totalDocuments,
       int targetDocumentSize,
       int threadId) {
     this.collection = collection;
     this.documentsToLoad = documentsToLoad;
     this.startIndex = startIndex;
-    this.insertedDocuments = insertedDocuments;
-    this.totalDocuments = totalDocuments;
     this.targetDocumentSize = targetDocumentSize;
+    this.metricsManager = MetricsManager.getInstance();
     this.threadId = threadId;
   }
 
@@ -56,21 +49,23 @@ public class DataLoader implements Runnable {
         boolean inserted = false;
         while (!inserted && retries < MAX_RETRIES) {
           try {
+            long startTime = System.nanoTime();
             collection.insertMany(batch);
-            long count = insertedDocuments.addAndGet(batch.size());
-            logger.debug(
-                "Thread {}: {} documents loaded. Total: {} / {}",
-                threadId,
-                batch.size(),
-                count,
-                totalDocuments);
+            long endTime = System.nanoTime();
+            double latencyMs = (endTime - startTime) / 1_000_000.0;
+
+            // Record metrics
+            metricsManager.recordWriteLatency(latencyMs);
+            metricsManager.addWriteOperations(batch.size());
+            metricsManager.addWriteOperations(batch.size());
             inserted = true;
             retries = 0;
           } catch (MongoException e) {
             logger.error("Thread {}: Error inserting batch: {}", threadId, e.getMessage());
+            metricsManager.incrementFailedOperations();
             retries++;
             if (retries < MAX_RETRIES) {
-              logger.info(
+              logger.warn(
                   "Thread {}: Retrying in {} ms (Attempt {} of {})",
                   threadId,
                   RETRY_DELAY_MS,
@@ -91,6 +86,5 @@ public class DataLoader implements Runnable {
         batch.clear();
       }
     }
-    logger.debug("Thread {}: Finished loading {} documents", threadId, documentsToLoad);
   }
 }

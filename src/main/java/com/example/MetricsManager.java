@@ -109,26 +109,60 @@ public class MetricsManager {
     long currentTime = System.currentTimeMillis();
     long elapsedSeconds = (currentTime - startTime.get()) / 1000;
     long totalOps = totalOperationsCount.get();
-    double throughput = elapsedSeconds > 0 ? (double) totalOps / elapsedSeconds : 0;
+    double currentOpsPerSec = elapsedSeconds > 0 ? (double) totalOps / elapsedSeconds : 0;
 
-    logger.info("--- Current Metrics ---");
-    logger.info("Elapsed Time: {} seconds", elapsedSeconds);
-    logger.info("Total Operations: {}", totalOps);
-    logger.info("Read Operations: {}", readOperationsCount.get());
-    logger.info("Write Operations: {}", writeOperationsCount.get());
-    logger.info("Failed Operations: {}", failedOperationsCount.get());
-    logger.info("Throughput: {} ops/sec", String.format("%.2f", throughput));
-    logger.info("Latest Read Latency: {} ms", String.format("%.2f", latestReadLatency.get()));
-    logger.info("Latest Write Latency: {} ms", String.format("%.2f", latestWriteLatency.get()));
+    // YCSB format: current time, elapsed time, operations, current throughput
+    System.out.printf(
+        "%tF %tT:%tL %d sec: %d operations; %.1f current ops/sec; ",
+        currentTime, currentTime, currentTime, elapsedSeconds, totalOps, currentOpsPerSec);
+
+    // Add operation stats in YCSB format
+    System.out.printf(
+        "[READ: Count=%d, Max=%.0f, Min=%.0f, Avg=%.2f] ",
+        readOperationsCount.get(),
+        latestReadLatency.get() * 1000, // convert ms to us
+        latestReadLatency.get() * 1000,
+        latestReadLatency.get() * 1000);
+
+    System.out.printf(
+        "[UPDATE: Count=%d, Max=%.0f, Min=%.0f, Avg=%.2f]\n",
+        writeOperationsCount.get(),
+        latestWriteLatency.get() * 1000,
+        latestWriteLatency.get() * 1000,
+        latestWriteLatency.get() * 1000);
 
     // Add cluster state information
     ClusterState clusterState = ClusterState.getInstance();
-    logger.info("Cluster State: {}", clusterState);
+    logger.debug("Cluster State: {}", clusterState);
+  }
+
+  // Add a new method for final report in YCSB format
+  public void printFinalReport() {
+    long totalTime = System.currentTimeMillis() - startTime.get();
+    double overallThroughput = (double) totalOperationsCount.get() * 1000 / totalTime;
+
+    System.out.println("[OVERALL], RunTime(ms), " + totalTime);
+    System.out.println(
+        "[OVERALL], Throughput(ops/sec), " + String.format("%.2f", overallThroughput));
+
+    // Print operation stats
+    double readAvgLatency = latestReadLatency.get() * 1000; // convert to us
+    System.out.println("[READ], Operations, " + readOperationsCount.get());
+    System.out.println("[READ], AverageLatency(us), " + String.format("%.2f", readAvgLatency));
+
+    double writeAvgLatency = latestWriteLatency.get() * 1000; // convert to us
+    System.out.println("[UPDATE], Operations, " + writeOperationsCount.get());
+    System.out.println("[UPDATE], AverageLatency(us), " + String.format("%.2f", writeAvgLatency));
   }
 
   public void incrementTotalOperations() {
     totalOperations.add(1);
     totalOperationsCount.incrementAndGet();
+  }
+
+  public void addTotalOperations(int count) {
+    totalOperations.add(count);
+    totalOperationsCount.addAndGet(count);
   }
 
   public void incrementReadOperations() {
@@ -139,6 +173,11 @@ public class MetricsManager {
   public void incrementWriteOperations() {
     writeOperations.add(1);
     writeOperationsCount.incrementAndGet();
+  }
+
+  public void addWriteOperations(int count) {
+    writeOperations.add(count);
+    writeOperationsCount.addAndGet(count);
   }
 
   public void incrementFailedOperations() {
@@ -160,9 +199,5 @@ public class MetricsManager {
     readOperationsCount.set(0);
     writeOperationsCount.set(0);
     failedOperationsCount.set(0);
-  }
-
-  public AtomicLong getTotalOperationsCount() {
-    return totalOperationsCount;
   }
 }

@@ -4,7 +4,6 @@ import com.mongodb.MongoCommandException;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.model.IndexOptions;
@@ -15,7 +14,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,20 +26,30 @@ public class Main {
 
   public static void main(String[] args) {
     Config config = Config.fromEnv();
+    boolean isLoad = args.length > 0 && args[0].equals("load");
+    boolean isStress = !isLoad && args.length > 0 && args[0].equals("stress");
 
-    if (args.length > 0 && args[0].equals("load")) {
-      logger.info("Starting data loading phase");
+    if (isLoad) {
+      logger.debug("Starting data loading phase");
       loadData(config);
-    } else if (args.length > 0 && args[0].equals("stress")) {
-      logger.info("Starting stress testing phase");
+    } else if (isStress) {
+      logger.debug("Starting stress testing phase");
       runStressTest(config);
     } else {
-      logger.info("Starting load testing phase");
+      int writePercentage = config.getWritePercentage();
+      int readPercentage = 100 - writePercentage;
+      System.out.printf("[WORKLOAD], READ, %d%%.%n", readPercentage);
+      System.out.printf("[WORKLOAD], UPDATE, %d%%.%n", writePercentage);
+      System.out.println("Starting test.");
+      logger.debug("Starting load testing phase");
       runLoadTest(config);
     }
   }
 
   private static void loadData(Config config) {
+    MetricsManager metricsManager = MetricsManager.getInstance();
+    metricsManager.resetStartTime();
+
     try (MongoClient mongoClient =
         MongoClients.create(MongoClientSettingsBuilder.build(config.getConnectionString()))) {
       MongoDatabase database = mongoClient.getDatabase(config.getDatabaseName());
@@ -50,14 +58,10 @@ public class Main {
       // Setup index
       setupIndex(config, mongoClient);
 
-      ExecutorService executor = Executors.newFixedThreadPool(config.getNumThreads());
-
       long totalDocuments = (long) config.getNumThreads() * config.getDocumentsPerThread();
-      logger.info("Preparing to insert {} documents", totalDocuments);
+      logger.info("Total documents to insert {}", totalDocuments);
 
-      AtomicLong insertedDocuments = new AtomicLong(0);
-
-      long startTime = System.currentTimeMillis();
+      ExecutorService executor = Executors.newFixedThreadPool(config.getNumThreads());
 
       for (int i = 0; i < config.getNumThreads(); i++) {
         int startIndex = i * config.getDocumentsPerThread();
@@ -66,8 +70,6 @@ public class Main {
                 collection,
                 config.getDocumentsPerThread(),
                 startIndex,
-                insertedDocuments,
-                totalDocuments,
                 config.getTargetDocumentSize(),
                 i));
       }
@@ -79,11 +81,7 @@ public class Main {
           new Thread(
               () -> {
                 while (!executor.isTerminated()) {
-                  long inserted = insertedDocuments.get();
-                  double percentage = (inserted * 100.0) / totalDocuments;
-                  logger.info(
-                      "Overall Progress: {} / {} documents inserted ({}%)",
-                      inserted, totalDocuments, String.format("%.2f", percentage));
+                  metricsManager.printCurrentMetrics();
                   try {
                     Thread.sleep(10000); // Log every 10 seconds
                   } catch (InterruptedException e) {
@@ -98,13 +96,7 @@ public class Main {
       progressLogger.interrupt(); // Stop the progress logger
       progressLogger.join();
 
-      long endTime = System.currentTimeMillis();
-      long duration = (endTime - startTime) / 1000; // in seconds
-
-      logger.info(
-          "Data loading completed. {} documents inserted. Duration: {} seconds",
-          insertedDocuments.get(),
-          duration);
+      metricsManager.printCurrentMetrics(); // Print final metrics
     } catch (InterruptedException e) {
       logger.error("Data loading interrupted", e);
       Thread.currentThread().interrupt();
@@ -134,17 +126,11 @@ public class Main {
       executor.shutdown();
 
       // Start a progress logging thread
-      long totalDocuments = (long) config.getNumThreads() * config.getDocumentsPerThread();
       Thread progressLogger =
           new Thread(
               () -> {
                 while (!executor.isTerminated()) {
                   metricsManager.printCurrentMetrics();
-                  long totalOps = metricsManager.getTotalOperationsCount().get();
-                  double percentage = (totalOps * 100.0) / totalDocuments;
-                  logger.info(
-                      "Overall Progress: {} / {} documents ({}%)",
-                      totalOps, totalDocuments, String.format("%.2f", percentage));
                   try {
                     Thread.sleep(10000); // Log every 10 seconds
                   } catch (InterruptedException e) {
@@ -158,8 +144,6 @@ public class Main {
       executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
       progressLogger.interrupt(); // Stop the progress logger
       progressLogger.join();
-
-      logger.info("Load test completed.");
       metricsManager.printCurrentMetrics(); // Print final metrics
     } catch (InterruptedException e) {
       logger.error("Load test interrupted", e);
@@ -168,9 +152,7 @@ public class Main {
   }
 
   private static boolean isCollectionCreated(MongoClient client, String dbName, String collName) {
-    MongoCursor<String> collections = client.getDatabase(dbName).listCollectionNames().iterator();
-    while (collections.hasNext()) {
-      String c = collections.next();
+    for (final String c : client.getDatabase(dbName).listCollectionNames()) {
       if (c.equals(collName)) {
         return true;
       }
@@ -272,7 +254,7 @@ public class Main {
 
         operationCount++;
         if (operationCount % 100 == 0) {
-          logger.info("Completed {} operations", operationCount);
+          logger.debug("Completed {} operations", operationCount);
         }
       } catch (Exception e) {
         logger.error("Error during MongoDB operation: {}", e.getMessage());
@@ -283,12 +265,12 @@ public class Main {
   static class CPUIntensiveTask implements Runnable {
     @Override
     public void run() {
-      logger.info("stressing cpu");
+      logger.debug("stressing cpu");
       List<Integer> primes = new ArrayList<>();
       while (stressTestKeepRunning.get()) {
         for (int i = 2; i < 1_000_000_000; i++) {
           if (i % 10_000_000 == 0) {
-            logger.info("checking {} is prime", i);
+            logger.debug("checking {} is prime", i);
           }
           if (isPrime(i)) {
             primes.add(i);
