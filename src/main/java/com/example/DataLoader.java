@@ -56,7 +56,7 @@ public class DataLoader implements Runnable {
 
             // Record metrics
             metricsManager.recordWriteLatency(latencyMs);
-            metricsManager.addWriteOperations(batch.size());
+            metricsManager.addTotalOperations(batch.size());
             metricsManager.addWriteOperations(batch.size());
             inserted = true;
             retries = 0;
