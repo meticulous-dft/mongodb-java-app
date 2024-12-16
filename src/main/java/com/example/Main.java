@@ -97,6 +97,7 @@ public class Main {
       progressLogger.join();
 
       metricsManager.printCurrentMetrics(); // Print final metrics
+      metricsManager.printFinalReport();
     } catch (InterruptedException e) {
       logger.error("Data loading interrupted", e);
       Thread.currentThread().interrupt();
@@ -145,6 +146,7 @@ public class Main {
       progressLogger.interrupt(); // Stop the progress logger
       progressLogger.join();
       metricsManager.printCurrentMetrics(); // Print final metrics
+      metricsManager.printFinalReport();
     } catch (InterruptedException e) {
       logger.error("Load test interrupted", e);
       Thread.currentThread().interrupt();
